@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TransactionType;
+use App\Http\Resources\TransactionResource;
 use App\Models\Balance;
 use App\Models\Expense;
 use App\Models\Income;
@@ -22,8 +23,12 @@ class HomeController extends Controller
      */
     public function getTransactionListByMonth(Request $request)
     {
-        $transaction = Transaction::whereMonth('date', '=', 2)->whereIn('transaction_type', $request->type)->get();
-        return response()->json($transaction);
+        $transactions = Transaction::whereMonth('date', '=', $request->month)->whereIn('transaction_type', $request->type)->get();
+        foreach ($transactions as $k => &$item) {
+            $transactions[$k] = new TransactionResource($item);
+        }
+        unset($item);
+        return response()->json($transactions);
     }
 
     public function getBalance()
@@ -86,7 +91,7 @@ class HomeController extends Controller
             $transactionType,
             $total) {
             DB::table('transactions')->insert([
-                'date' => $date,
+                'date' => $request->input("date"),
                 'content' => $request->input("content"),
                 'person' => $request->input("person"),
                 'amount' => $amount,

@@ -17,7 +17,7 @@ Route::get('/', function () {
     return ['Laravel' => app()->version()];
 });
 Route::controller(\App\Http\Controllers\HomeController::class)->group(function () {
-    Route::get('api/transactions-month', 'getTransactionListByMonth');
+    Route::post('api/transactions-month', 'getTransactionListByMonth');
     Route::post('api/transaction', 'store');
     Route::put('api/transaction', 'update');
     Route::delete('api/transaction/{id}', 'destroy');
