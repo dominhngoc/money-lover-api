@@ -1,4 +1,4 @@
-FROM php:7.2-fpm
+FROM php:8.1-fpm
 
 # Copy composer.lock and composer.json
 COPY composer.lock composer.json /var/www/
@@ -24,8 +24,7 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install extensions
-RUN docker-php-ext-install pdo_mysql mbstring zip exif pcntl
-RUN docker-php-ext-configure gd --with-gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ --with-png-dir=/usr/include/
+RUN docker-php-ext-install pdo_mysql
 RUN docker-php-ext-install gd
 
 # Install composer
@@ -43,7 +42,8 @@ COPY --chown=www:www . /var/www
 
 # Change current user to www
 USER www
-
+RUN php artisan migrate
+RUN php artisan db:seed BalanceSeeder
 # Expose port 9000 and start php-fpm server
 EXPOSE 9000
 CMD ["php-fpm"]
