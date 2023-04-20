@@ -42,8 +42,7 @@ COPY --chown=www:www . /var/www
 
 # Change current user to www
 USER www
-RUN php artisan migrate
-RUN php artisan db:seed BalanceSeeder
+
 # Expose port 9000 and start php-fpm server
 EXPOSE 9000
 CMD ["php-fpm"]
