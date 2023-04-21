@@ -20,7 +20,8 @@ Route::controller(\App\Http\Controllers\HomeController::class)->group(function (
     Route::get('api/transaction/{id}', 'show');
     Route::post('api/transactions-month', 'getTransactionListByMonth');
     Route::post('api/transaction', 'store');
-    Route::put('api/transaction', 'update');
+    Route::post('api/transactions', 'storeMulti');
+    Route::put('api/transaction-update', 'update');
     Route::delete('api/transaction/{id}', 'destroy');
     Route::get('api/balance', 'getBalance');
     Route::get('api/balance-specific', 'getBalanceSpecific');

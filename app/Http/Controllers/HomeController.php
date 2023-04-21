@@ -45,7 +45,7 @@ class HomeController extends Controller
         $loanTotal = Loan::where('month', $month)->value('total');
         $lendTotal = Lend::where('month', $month)->value('total');
         return response()->json([
-            'expenseTotal'=>$expenseTotal,
+            'expenseTotal' => $expenseTotal,
             'incomeTotal' => $incomeTotal,
             'loanTotal' => $loanTotal,
             'lendTotal' => $lendTotal
@@ -98,31 +98,57 @@ class HomeController extends Controller
                 'transaction_type' => $transactionType,
                 'category_type' => $request->input("categoryType"),
             ]);
-//            if($transactionTypeRow->exists()) {
-//                $transactionTypeAmount = $transactionTypeRow->value("total");
-//                $transactionTypeRow->update([
-//                    'total' => (integer)$transactionTypeAmount + (integer)$amount
-//                ]);
-//            }else {
-//                $transactionTypeRow->insert([
-//                    'total' => (integer)$amount,
-//                    'month' => date('m',strtotime($date)),
-//                ]);
-//            }
-//            DB::table('balances')->where('id', 1)->update(['total' => $total, $transactionTypeFieldName => (integer)$amount + (integer)$fieldAmount]);
+            if ($transactionTypeRow->exists()) {
+                $transactionTypeAmount = $transactionTypeRow->value("total");
+                $transactionTypeRow->update([
+                    'total' => (integer)$transactionTypeAmount + (integer)$amount
+                ]);
+            } else {
+                $transactionTypeRow->insert([
+                    'total' => (integer)$amount,
+                    'month' => date('m', strtotime($date)),
+                ]);
+            }
+            DB::table('balances')->where('id', 1)->update(['total' => $total, $transactionTypeFieldName => (integer)$amount + (integer)$fieldAmount]);
         });
     }
+    public function storeMulti(Request $request){
+        $date = $request->date;
+        $data = $request->transactions;
+        $sum = $request->sum;
+        $basicExpenseRow = DB::table('basic_expenses')->where('month', date('m',strtotime($date)));
+        DB::transaction(function () use ($sum, $basicExpenseRow, $date, $data){
+            DB::table('transactions')->insert($data);
+            if ($basicExpenseRow->exists()) {
+                $basicExpenseAmount = $basicExpenseRow->value("total");
+                $basicExpenseRow->update([
+                    'total' => (integer)$basicExpenseAmount + $sum
+                ]);
+            } else {
+                $basicExpenseRow->insert([
+                    'total' => $sum,
+                    'month' => date('m', strtotime($date)),
+                ]);
+            }
+            $balanceAmount = DB::table('balances')->value('total');
+            $balanceBasicExpenseAmount = DB::table('balances')->value('basicExpenseTotal');
+            DB::table('balances')->where('id', 1)->update(['total' => $balanceAmount + $sum, 'basicExpenseTotal' => (integer)$balanceBasicExpenseAmount + $sum]);
+        });
 
+    }
     /**
      * Display the specified resource.
      *
      * @param \App\Models\Transaction $transaction
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show($id)
     {
-        $transaction = Transaction::find($id)->first();
-        return response()->json(new TransactionResource($transaction));
+        $transaction = DB::table("transactions")->where('id', $id)->first();
+        if($transaction){
+            return response()->json(new TransactionResource($transaction));
+        }
+        return response()->json();
     }
 
     /**
@@ -134,16 +160,16 @@ class HomeController extends Controller
      */
     public function update(Request $request)
     {
-        $transaction = Transaction::find($request->input("id"));
-        if ($transaction) {
-            $transaction->date = $request->input("date");
-            $transaction->content = $request->input("content");
-            $transaction->person = $request->input("person");
-            $transaction->amount = $request->input("amount");
-            $transaction->transaction_type = $request->input("transactionType");
-            $transaction->category_type = $request->input("categoryType");
-            $transaction->save();
-        }
+        $transaction = DB::table("transactions")
+            ->where('id', $request->id)
+            ->update([
+                'date' => $request->input("date"),
+                'content' => $request->input("content"),
+                'person' => $request->input("person"),
+                'amount' => $request->input("amount"),
+                'transaction_type' => $request->input("transactionType"),
+                'category_type' => $request->input("categoryType"),
+            ]);
     }
 
     /**
