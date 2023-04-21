@@ -119,9 +119,10 @@ class HomeController extends Controller
      * @param \App\Models\Transaction $transaction
      * @return \Illuminate\Http\Response
      */
-    public function show(Transaction $transaction)
+    public function show($id)
     {
-        //
+        $transaction = Transaction::find($id)->first();
+        return response()->json(new TransactionResource($transaction));
     }
 
     /**
@@ -133,7 +134,6 @@ class HomeController extends Controller
      */
     public function update(Request $request)
     {
-        Log::error((string)$request->input("date"));
         $transaction = Transaction::find($request->input("id"));
         if ($transaction) {
             $transaction->date = $request->input("date");
