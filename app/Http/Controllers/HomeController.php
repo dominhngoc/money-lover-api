@@ -98,18 +98,18 @@ class HomeController extends Controller
                 'transaction_type' => $transactionType,
                 'category_type' => $request->input("categoryType"),
             ]);
-            if($transactionTypeRow->exists()) {
-                $transactionTypeAmount = $transactionTypeRow->value("total");
-                $transactionTypeRow->update([
-                    'total' => (integer)$transactionTypeAmount + (integer)$amount
-                ]);
-            }else {
-                $transactionTypeRow->insert([
-                    'total' => (integer)$amount,
-                    'month' => date('m',strtotime($date)),
-                ]);
-            }
-            DB::table('balances')->where('id', 1)->update(['total' => $total, $transactionTypeFieldName => (integer)$amount + (integer)$fieldAmount]);
+//            if($transactionTypeRow->exists()) {
+//                $transactionTypeAmount = $transactionTypeRow->value("total");
+//                $transactionTypeRow->update([
+//                    'total' => (integer)$transactionTypeAmount + (integer)$amount
+//                ]);
+//            }else {
+//                $transactionTypeRow->insert([
+//                    'total' => (integer)$amount,
+//                    'month' => date('m',strtotime($date)),
+//                ]);
+//            }
+//            DB::table('balances')->where('id', 1)->update(['total' => $total, $transactionTypeFieldName => (integer)$amount + (integer)$fieldAmount]);
         });
     }
 

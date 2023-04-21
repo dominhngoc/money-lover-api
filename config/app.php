@@ -56,7 +56,7 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
-    'frontend_url' => env('FRONTEND_URL', 'https://jovial-salamander-031e21.netlify.app/'),
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:8081'),
 
     'asset_url' => env('ASSET_URL', null),
 
