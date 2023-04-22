@@ -81,37 +81,20 @@ class HomeController extends Controller
      */
     public function store(Request $request)
     {
-        $balanceAmount = DB::table('balances')->value('total');
         $date = $request->input("date");
         $amount = $request->input("amount");
         $transactionType = $request->input("transactionType");
 
-        $total = 0;
-        if ($transactionType === TransactionType::EXPENSE
-            || $transactionType === TransactionType::BASIC_EXPENSE
-            || $transactionType === TransactionType::LEND) {
-            $total = $balanceAmount - (integer)$amount;
-        } else if ($transactionType === TransactionType::INCOME
-            || $transactionType === TransactionType::LOAN) {
-            $total = $balanceAmount + (integer)$amount;
-        }
         $transactionTypeName = strtolower(TransactionType::getKey($transactionType));
-
         $transactionTypeTableName = $transactionTypeName . "s";
         $transactionTypeRow = DB::table($transactionTypeTableName)->where('month', date('m',strtotime($date)));
 
-        $transactionTypeFieldName = $this->camelize($transactionTypeName) . "Total";
-        $fieldAmount = DB::table('balances')->value($transactionTypeFieldName);
-
-
-        DB::transaction(function () use ($fieldAmount,
+        DB::transaction(function () use (
             $transactionTypeRow,
-            $transactionTypeFieldName,
             $date,
             $request,
             $amount,
-            $transactionType,
-            $total) {
+            $transactionType) {
             DB::table('transactions')->insert([
                 'date' => $request->input("date"),
                 'content' => $request->input("content"),
@@ -131,7 +114,6 @@ class HomeController extends Controller
                     'month' => date('m', strtotime($date)),
                 ]);
             }
-            DB::table('balances')->where('id', 1)->update(['total' => $total, $transactionTypeFieldName => (integer)$amount + (integer)$fieldAmount]);
         });
     }
     public function storeMulti(Request $request){
@@ -202,38 +184,21 @@ class HomeController extends Controller
      */
     public function destroy(Request $request)
     {
-        $balanceAmount = DB::table('balances')->value('total');
         $date = $request->input("date");
         $amount = $request->input("amount");
         $transactionType = $request->input("transactionType");
 
-        $total = 0;
-        if ($transactionType === TransactionType::EXPENSE
-            || $transactionType === TransactionType::BASIC_EXPENSE
-            || $transactionType === TransactionType::LEND) {
-            $total = $balanceAmount + (integer)$amount;
-        } else if ($transactionType === TransactionType::INCOME
-            || $transactionType === TransactionType::LOAN) {
-            $total = $balanceAmount - (integer)$amount;
-        }
         $transactionTypeName = strtolower(TransactionType::getKey($transactionType));
 
         $transactionTypeTableName = $transactionTypeName . "s";
         $transactionTypeRow = DB::table($transactionTypeTableName)->where('month', date('m', strtotime($date)));
 
-        $transactionTypeFieldName = $this->camelize($transactionTypeName) . "Total";
-        $fieldAmount = DB::table('balances')->value($transactionTypeFieldName);
-
-
         DB::transaction(function () use (
-            $fieldAmount,
             $transactionTypeRow,
-            $transactionTypeFieldName,
             $date,
             $request,
             $amount,
             $transactionType,
-            $total
         ) {
             $transactionRow = Transaction::where('id', $request->id);
             if (!$transactionRow->exists()) {
@@ -251,7 +216,6 @@ class HomeController extends Controller
                     'month' => date('m', strtotime($date)),
                 ]);
             }
-            DB::table('balances')->where('id', 1)->update(['total' => $total, $transactionTypeFieldName => (integer)$amount - (integer)$fieldAmount]);
         });
     }
 }
