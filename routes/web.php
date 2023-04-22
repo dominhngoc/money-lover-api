@@ -22,7 +22,7 @@ Route::controller(\App\Http\Controllers\HomeController::class)->group(function (
     Route::post('api/transaction', 'store');
     Route::post('api/transactions', 'storeMulti');
     Route::put('api/transaction-update', 'update');
-    Route::delete('api/transaction/{id}', 'destroy');
+    Route::post('api/transaction-delete', 'destroy');
     Route::get('api/balance', 'getBalance');
     Route::post('api/balance-specific', 'getBalanceSpecific');
 });

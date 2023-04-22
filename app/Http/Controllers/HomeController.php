@@ -37,8 +37,18 @@ class HomeController extends Controller
 
     public function getBalance()
     {
-        $balance = Balance::where('id', 1)->get();
-        return response()->json($balance);
+        $expenseTotal = Expense::sum('total');
+        $incomeTotal = Income::sum('total');
+        $loanTotal = Loan::sum('total');
+        $lendTotal = Lend::sum('total');
+        return response()->json([
+            'balanceTotal' => $incomeTotal - $expenseTotal,
+            'savingsTotal' => $incomeTotal + $loanTotal - $expenseTotal - $lendTotal,
+            'expenseTotal' => $expenseTotal,
+            'incomeTotal' => $incomeTotal,
+            'loanTotal' => $loanTotal,
+            'lendTotal' => $lendTotal
+        ]);
     }
 
     public function getBalanceSpecific(Request $request)
@@ -73,6 +83,7 @@ class HomeController extends Controller
 
         $total = 0;
         if ($transactionType === TransactionType::EXPENSE
+            || $transactionType === TransactionType::BASIC_EXPENSE
             || $transactionType === TransactionType::LEND) {
             $total = $balanceAmount - (integer)$amount;
         } else if ($transactionType === TransactionType::INCOME
@@ -184,8 +195,58 @@ class HomeController extends Controller
      * @param \App\Models\Transaction $transaction
      * @return \Illuminate\Http\Response
      */
-    public function destroy(string $id)
+    public function destroy(Request $request)
     {
-        $deleted = Transaction::where('id', $id)->delete();
+        $balanceAmount = DB::table('balances')->value('total');
+        $date = $request->input("date");
+        $amount = $request->input("amount");
+        $transactionType = $request->input("transactionType");
+
+        $total = 0;
+        if ($transactionType === TransactionType::EXPENSE
+            || $transactionType === TransactionType::BASIC_EXPENSE
+            || $transactionType === TransactionType::LEND) {
+            $total = $balanceAmount + (integer)$amount;
+        } else if ($transactionType === TransactionType::INCOME
+            || $transactionType === TransactionType::LOAN) {
+            $total = $balanceAmount - (integer)$amount;
+        }
+        $transactionTypeName = strtolower(TransactionType::getKey($transactionType));
+
+        $transactionTypeTableName = $transactionTypeName . "s";
+        $transactionTypeRow = DB::table($transactionTypeTableName)->where('month', date('m', strtotime($date)));
+
+        $transactionTypeFieldName = $this->camelize($transactionTypeName) . "Total";
+        $fieldAmount = DB::table('balances')->value($transactionTypeFieldName);
+
+
+        DB::transaction(function () use (
+            $fieldAmount,
+            $transactionTypeRow,
+            $transactionTypeFieldName,
+            $date,
+            $request,
+            $amount,
+            $transactionType,
+            $total
+        ) {
+            $transactionRow = Transaction::where('id', $request->id);
+            if (!$transactionRow->exists()) {
+                return;
+            }
+            $transactionRow->delete();
+            if ($transactionTypeRow->exists()) {
+                $transactionTypeAmount = $transactionTypeRow->value("total");
+                $transactionTypeRow->update([
+                    'total' => (integer)$transactionTypeAmount - (integer)$amount
+                ]);
+            } else {
+                $transactionTypeRow->insert([
+                    'total' => (integer)$amount,
+                    'month' => date('m', strtotime($date)),
+                ]);
+            }
+            DB::table('balances')->where('id', 1)->update(['total' => $total, $transactionTypeFieldName => (integer)$amount - (integer)$fieldAmount]);
+        });
     }
 }
