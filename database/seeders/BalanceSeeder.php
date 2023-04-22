@@ -21,6 +21,7 @@ class BalanceSeeder extends Seeder
             'incomeTotal' => 0,
             'loanTotal' => 0,
             'lendTotal' => 0,
+            'basicExpenseTotal' => 0,
         ]);
     }
 }

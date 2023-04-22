@@ -21,9 +21,13 @@ class HomeController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
+    function camelize($input, $separator = '_')
+    {
+        return lcfirst(str_replace($separator, '', ucwords($input, $separator)));
+    }
     public function getTransactionListByMonth(Request $request)
     {
-        $transactions = Transaction::whereMonth('date', '=', $request->month)->whereIn('transaction_type', $request->type)->get();
+        $transactions = Transaction::whereMonth('date', '=', $request->month)->whereIn('transaction_type', $request->type)->orderBy('date')->get();
         foreach ($transactions as $k => &$item) {
             $transactions[$k] = new TransactionResource($item);
         }
@@ -45,6 +49,8 @@ class HomeController extends Controller
         $loanTotal = Loan::where('month', $month)->value('total');
         $lendTotal = Lend::where('month', $month)->value('total');
         return response()->json([
+            'balanceTotal' => $incomeTotal - $expenseTotal,
+            'savingsTotal' => $incomeTotal + $loanTotal - $expenseTotal - $lendTotal,
             'expenseTotal' => $expenseTotal,
             'incomeTotal' => $incomeTotal,
             'loanTotal' => $loanTotal,
@@ -78,7 +84,7 @@ class HomeController extends Controller
         $transactionTypeTableName = $transactionTypeName . "s";
         $transactionTypeRow = DB::table($transactionTypeTableName)->where('month', date('m',strtotime($date)));
 
-        $transactionTypeFieldName = $transactionTypeName . "Total";
+        $transactionTypeFieldName = $this->camelize($transactionTypeName) . "Total";
         $fieldAmount = DB::table('balances')->value($transactionTypeFieldName);
 
 

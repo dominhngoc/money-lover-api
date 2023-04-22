@@ -24,7 +24,7 @@ Route::controller(\App\Http\Controllers\HomeController::class)->group(function (
     Route::put('api/transaction-update', 'update');
     Route::delete('api/transaction/{id}', 'destroy');
     Route::get('api/balance', 'getBalance');
-    Route::get('api/balance-specific', 'getBalanceSpecific');
+    Route::post('api/balance-specific', 'getBalanceSpecific');
 });
 
 // get income,expense,loan,lend
