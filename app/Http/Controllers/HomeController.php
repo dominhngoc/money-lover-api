@@ -134,9 +134,6 @@ class HomeController extends Controller
                     'month' => date('m', strtotime($date)),
                 ]);
             }
-            $balanceAmount = DB::table('balances')->value('total');
-            $balanceBasicExpenseAmount = DB::table('balances')->value('basicExpenseTotal');
-            DB::table('balances')->where('id', 1)->update(['total' => $balanceAmount + $sum, 'basicExpenseTotal' => (integer)$balanceBasicExpenseAmount + $sum]);
         });
 
     }
