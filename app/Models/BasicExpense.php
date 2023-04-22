@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class BasicExpense extends Model
 {
     use HasFactory;
-    protected $table = 'basicExpense';
+    protected $table = 'basic_expenses';
     protected $fillable = [
         'total',
         'month',

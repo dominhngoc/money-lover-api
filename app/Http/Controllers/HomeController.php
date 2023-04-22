@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\TransactionType;
 use App\Http\Resources\TransactionResource;
 use App\Models\Balance;
+use App\Models\BasicExpense;
 use App\Models\Expense;
 use App\Models\Income;
 use App\Models\Lend;
@@ -38,13 +39,15 @@ class HomeController extends Controller
     public function getBalance()
     {
         $expenseTotal = Expense::sum('total');
+        $basicExpenseTotal = BasicExpense::sum('total');
         $incomeTotal = Income::sum('total');
         $loanTotal = Loan::sum('total');
         $lendTotal = Lend::sum('total');
         return response()->json([
-            'balanceTotal' => $incomeTotal - $expenseTotal,
-            'savingsTotal' => $incomeTotal + $loanTotal - $expenseTotal - $lendTotal,
+            'balanceTotal' => $incomeTotal - $expenseTotal-$basicExpenseTotal,
+            'savingsTotal' => $incomeTotal + $loanTotal - $expenseTotal- $basicExpenseTotal - $lendTotal,
             'expenseTotal' => $expenseTotal,
+            'basicExpenseTotal' => $basicExpenseTotal,
             'incomeTotal' => $incomeTotal,
             'loanTotal' => $loanTotal,
             'lendTotal' => $lendTotal
@@ -55,13 +58,15 @@ class HomeController extends Controller
     {
         $month = $request->input("month");
         $expenseTotal = Expense::where('month', $month)->value('total');
+        $basicExpenseTotal = BasicExpense::where('month', $month)->value('total');
         $incomeTotal = Income::where('month', $month)->value('total');
         $loanTotal = Loan::where('month', $month)->value('total');
         $lendTotal = Lend::where('month', $month)->value('total');
         return response()->json([
-            'balanceTotal' => $incomeTotal - $expenseTotal,
-            'savingsTotal' => $incomeTotal + $loanTotal - $expenseTotal - $lendTotal,
+            'balanceTotal' => $incomeTotal - $expenseTotal - $basicExpenseTotal,
+            'savingsTotal' => $incomeTotal + $loanTotal - $expenseTotal -$basicExpenseTotal - $lendTotal,
             'expenseTotal' => $expenseTotal,
+            'basicExpenseTotal' => $basicExpenseTotal,
             'incomeTotal' => $incomeTotal,
             'loanTotal' => $loanTotal,
             'lendTotal' => $lendTotal
