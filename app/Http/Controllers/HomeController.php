@@ -67,6 +67,7 @@ class HomeController extends Controller
             ->selectRaw('category_type, sum(amount) as sum')
             ->groupBy('category_type')
             ->whereMonth('date', $request->month)
+            ->where('transaction_type', TransactionType::EXPENSE)
             ->get();
         return response()->json($expense);
     }
@@ -211,7 +212,7 @@ class HomeController extends Controller
             $date,
             $request,
             $amount,
-            $transactionType,
+            $transactionType
         ) {
             $transactionRow = Transaction::where('id', $request->id);
             if (!$transactionRow->exists()) {
