@@ -35,8 +35,16 @@ class HomeController extends Controller
         unset($item);
         return response()->json($transactions);
     }
-
-    public function getBalance()
+    public function getTransactionList(Request $request)
+    {
+        $transactions = Transaction::whereIn('transaction_type', $request->type)->orderBy('date')->get();
+        foreach ($transactions as $k => &$item) {
+            $transactions[$k] = new TransactionResource($item);
+        }
+        unset($item);
+        return response()->json($transactions);
+    }
+    public function getBalanceSpecific(Request $request)
     {
         $expenseTotal = Expense::sum('total');
         $basicExpenseTotal = BasicExpense::sum('total');
@@ -44,8 +52,8 @@ class HomeController extends Controller
         $loanTotal = Loan::sum('total');
         $lendTotal = Lend::sum('total');
         return response()->json([
-            'balanceTotal' => $incomeTotal - $expenseTotal-$basicExpenseTotal,
-            'savingsTotal' => $incomeTotal + $loanTotal - $expenseTotal- $basicExpenseTotal - $lendTotal,
+            'balanceTotal' => $incomeTotal - $expenseTotal - $basicExpenseTotal,
+            'savingsTotal' => $incomeTotal + $loanTotal - $expenseTotal -$basicExpenseTotal - $lendTotal,
             'expenseTotal' => $expenseTotal,
             'basicExpenseTotal' => $basicExpenseTotal,
             'incomeTotal' => $incomeTotal,
@@ -53,8 +61,16 @@ class HomeController extends Controller
             'lendTotal' => $lendTotal
         ]);
     }
-
-    public function getBalanceSpecific(Request $request)
+    public function getExpenseSpecific(Request $request)
+    {
+        $expense = DB::table('transactions')
+            ->selectRaw('category_type, sum(amount) as sum')
+            ->groupBy('category_type')
+            ->whereMonth('date', $request->month)
+            ->get();
+        return response()->json($expense);
+    }
+    public function getBalanceSpecificByMonth(Request $request)
     {
         $month = $request->input("month");
         $expenseTotal = Expense::where('month', $month)->value('total');

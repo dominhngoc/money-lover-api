@@ -19,12 +19,14 @@ Route::get('/', function () {
 Route::controller(\App\Http\Controllers\HomeController::class)->group(function () {
     Route::get('api/transaction/{id}', 'show');
     Route::post('api/transactions-month', 'getTransactionListByMonth');
+    Route::post('api/transactions-all', 'getTransactionList');
     Route::post('api/transaction', 'store');
     Route::post('api/transactions', 'storeMulti');
     Route::put('api/transaction-update', 'update');
     Route::post('api/transaction-delete', 'destroy');
-    Route::get('api/balance', 'getBalance');
-    Route::post('api/balance-specific', 'getBalanceSpecific');
+    Route::post('api/expense-specific', 'getExpenseSpecific');
+    Route::get('api/balance-specific', 'getBalanceSpecific');
+    Route::post('api/balance-specific-month', 'getBalanceSpecificByMonth');
 });
 
 // get income,expense,loan,lend
