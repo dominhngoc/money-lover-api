@@ -54,8 +54,8 @@ class HomeController extends Controller
     public function getTransactionList(Request $request)
     {
         $transactions = Transaction::whereIn('transaction_type', $request->type)
+            ->where('is_coming_soon', false)
             ->orderBy('date')
-            ->orWhere('is_coming_soon', false)
             ->get();
         foreach ($transactions as $k => &$item) {
             $transactions[$k] = new TransactionResource($item);
@@ -146,6 +146,9 @@ class HomeController extends Controller
                 'is_installment' => $request->input("isInstallment"),
                 'category_type' => $request->input("categoryType"),
             ]);
+            if($request->input('no_balance_effect')) {
+                return;
+            }
             if(!$isComingSoon || $isInstallment) {
                 if ($transactionTypeRow->exists()) {
                     $transactionTypeAmount = $transactionTypeRow->value("total");
@@ -263,7 +266,8 @@ class HomeController extends Controller
             if($isComingSoon){
                 $request->merge([
                     'isComingSoon' => 0,
-                    'date' => date("Y-m-d H:i:s")
+                    'date' => date("Y-m-d H:i:s"),
+                    'no_balance_effect' => true,
                 ]);
                 $this->store($request);
                 return ;
