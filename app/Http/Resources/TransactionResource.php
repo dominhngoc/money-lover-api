@@ -22,6 +22,8 @@ class TransactionResource extends JsonResource
             'person' =>  $this->person,
             'transactionType' =>  $this->transaction_type,
             'categoryType' =>  $this->category_type,
+            'isComingSoon' =>  $this->is_coming_soon,
+            'isInstallment' =>  $this->is_installment,
         ];
     }
 }

@@ -16,4 +16,5 @@ final class TransactionType extends Enum
     const LOAN = 3;
     const LEND = 4;
     const BASIC_EXPENSE = 5;
+    const INVESTMENT = 6;
 }

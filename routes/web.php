@@ -27,6 +27,7 @@ Route::controller(\App\Http\Controllers\HomeController::class)->group(function (
     Route::post('api/expense-specific', 'getExpenseSpecific');
     Route::get('api/balance-specific', 'getBalanceSpecific');
     Route::post('api/balance-specific-month', 'getBalanceSpecificByMonth');
+    Route::get('api/transactions-schedule', 'getAllOfInstallmentAndComingSoon');
 });
 
 // get income,expense,loan,lend

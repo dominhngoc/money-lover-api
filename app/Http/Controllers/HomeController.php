@@ -26,9 +26,25 @@ class HomeController extends Controller
     {
         return lcfirst(str_replace($separator, '', ucwords($input, $separator)));
     }
+    public function getAllOfInstallmentAndComingSoon()
+    {
+        $transactions = Transaction::where('is_coming_soon', true)
+            ->orWhere('is_installment', true)
+            ->orderBy('date')
+            ->get();
+        foreach ($transactions as $k => &$item) {
+            $transactions[$k] = new TransactionResource($item);
+        }
+        unset($item);
+        return response()->json($transactions);
+    }
     public function getTransactionListByMonth(Request $request)
     {
-        $transactions = Transaction::whereMonth('date', '=', $request->month)->whereIn('transaction_type', $request->type)->orderBy('date')->get();
+        $transactions = Transaction::whereMonth('date', '=', $request->month)
+            ->whereIn('transaction_type', $request->type)
+            ->where('is_coming_soon', false)
+            ->orderBy('date')
+            ->get();
         foreach ($transactions as $k => &$item) {
             $transactions[$k] = new TransactionResource($item);
         }
@@ -37,7 +53,10 @@ class HomeController extends Controller
     }
     public function getTransactionList(Request $request)
     {
-        $transactions = Transaction::whereIn('transaction_type', $request->type)->orderBy('date')->get();
+        $transactions = Transaction::whereIn('transaction_type', $request->type)
+            ->orderBy('date')
+            ->orWhere('is_coming_soon', false)
+            ->get();
         foreach ($transactions as $k => &$item) {
             $transactions[$k] = new TransactionResource($item);
         }
@@ -101,6 +120,8 @@ class HomeController extends Controller
         $date = $request->input("date");
         $amount = $request->input("amount");
         $transactionType = $request->input("transactionType");
+        $isComingSoon = $request->input("isComingSoon");
+        $isInstallment = $request->input("isInstallment");
 
         $transactionTypeName = strtolower(TransactionType::getKey($transactionType));
         $transactionTypeTableName = $transactionTypeName . "s";
@@ -111,26 +132,44 @@ class HomeController extends Controller
             $date,
             $request,
             $amount,
-            $transactionType) {
-            DB::table('transactions')->insert([
+            $transactionType,
+            $isComingSoon,
+            $isInstallment
+        ) {
+            $transaction_id = DB::table('transactions')->insertGetId([
                 'date' => $request->input("date"),
                 'content' => $request->input("content"),
                 'person' => $request->input("person"),
-                'amount' => $amount,
-                'transaction_type' => $transactionType,
+                'amount' => $request->input("amount"),
+                'transaction_type' => $request->input("transactionType"),
+                'is_coming_soon' => $request->input("isComingSoon"),
+                'is_installment' => $request->input("isInstallment"),
                 'category_type' => $request->input("categoryType"),
             ]);
-            if ($transactionTypeRow->exists()) {
-                $transactionTypeAmount = $transactionTypeRow->value("total");
-                $transactionTypeRow->update([
-                    'total' => (integer)$transactionTypeAmount + (integer)$amount
-                ]);
-            } else {
-                $transactionTypeRow->insert([
-                    'total' => (integer)$amount,
-                    'month' => date('m', strtotime($date)),
+            if(!$isComingSoon || $isInstallment) {
+                if ($transactionTypeRow->exists()) {
+                    $transactionTypeAmount = $transactionTypeRow->value("total");
+                    $transactionTypeRow->update([
+                        'total' => (integer)$transactionTypeAmount + (integer)$amount
+                    ]);
+                } else {
+                    $transactionTypeRow->insert([
+                        'total' => (integer)$amount,
+                        'month' => date('m', strtotime($date)),
+                    ]);
+                }
+            }
+            if($isInstallment){
+                DB::table('installments')->insert([
+                    'total' => $request->input("total"),
+                    'number_of_months' => $request->input("number_of_months"),
+                    'paid' => $request->input("paid"),
+                    'paidCount' => $request->input("paidCount"),
+                    'remaining' => $request->input("remaining"),
+                    'transaction_id' => $transaction_id,
                 ]);
             }
+
         });
     }
     public function storeMulti(Request $request){
@@ -201,6 +240,7 @@ class HomeController extends Controller
         $date = $request->input("date");
         $amount = $request->input("amount");
         $transactionType = $request->input("transactionType");
+        $isComingSoon = $request->input("isComingSoon");
 
         $transactionTypeName = strtolower(TransactionType::getKey($transactionType));
 
@@ -212,13 +252,22 @@ class HomeController extends Controller
             $date,
             $request,
             $amount,
-            $transactionType
+            $transactionType,
+            $isComingSoon
         ) {
             $transactionRow = Transaction::where('id', $request->id);
             if (!$transactionRow->exists()) {
                 return;
             }
             $transactionRow->delete();
+            if($isComingSoon){
+                $request->merge([
+                    'isComingSoon' => 0,
+                    'date' => date("Y-m-d H:i:s")
+                ]);
+                $this->store($request);
+                return ;
+            }
             if ($transactionTypeRow->exists()) {
                 $transactionTypeAmount = $transactionTypeRow->value("total");
                 $transactionTypeRow->update([

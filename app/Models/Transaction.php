@@ -16,6 +16,8 @@ class Transaction extends Model
         'amount',
         'transaction_type',
         'category_type',
+        'isComingSoon',
+        'isInstallment',
     ];
 
 }
