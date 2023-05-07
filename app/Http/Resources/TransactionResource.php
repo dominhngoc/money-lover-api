@@ -24,6 +24,15 @@ class TransactionResource extends JsonResource
             'categoryType' =>  $this->category_type,
             'isComingSoon' =>  $this->is_coming_soon,
             'isInstallment' =>  $this->is_installment,
+            'total' =>  $this->total,
+            'startDate' =>  $this->start_date,
+            'numberOfMonths' =>  $this->number_of_months,
+            'totalOfMonths' =>  $this->total_of_months,
+            'paid' =>  $this->paid,
+            'paidCount' =>  $this->paidCount,
+            'remaining' =>  $this->remaining,
+            'installmentId' =>  $this->installment_id,
+            'updatedMonth' => $this->updated_at
         ];
     }
 }

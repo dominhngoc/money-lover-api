@@ -18,6 +18,7 @@ class Transaction extends Model
         'category_type',
         'isComingSoon',
         'isInstallment',
+        'updated_at',
     ];
 
 }

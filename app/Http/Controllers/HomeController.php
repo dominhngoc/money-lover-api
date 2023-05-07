@@ -26,11 +26,14 @@ class HomeController extends Controller
     {
         return lcfirst(str_replace($separator, '', ucwords($input, $separator)));
     }
+
     public function getAllOfInstallmentAndComingSoon()
     {
-        $transactions = Transaction::where('is_coming_soon', true)
-            ->orWhere('is_installment', true)
-            ->orderBy('date')
+        $transactions = DB::table('transactions')
+            ->where("is_coming_soon", "=", "1")
+            ->orWhere("is_installment", "=", "1")
+            ->leftJoin('installments', 'transactions.id', '=', 'installments.transaction_id')
+            ->select('transactions.*', 'installments.*', 'transactions.id as id', 'installments.id as installment_id')
             ->get();
         foreach ($transactions as $k => &$item) {
             $transactions[$k] = new TransactionResource($item);
@@ -38,11 +41,13 @@ class HomeController extends Controller
         unset($item);
         return response()->json($transactions);
     }
+
     public function getTransactionListByMonth(Request $request)
     {
         $transactions = Transaction::whereMonth('date', '=', $request->month)
             ->whereIn('transaction_type', $request->type)
             ->where('is_coming_soon', false)
+            ->where('is_installment', false)
             ->orderBy('date')
             ->get();
         foreach ($transactions as $k => &$item) {
@@ -51,18 +56,30 @@ class HomeController extends Controller
         unset($item);
         return response()->json($transactions);
     }
+
     public function getTransactionList(Request $request)
     {
+        $total = DB::table('transactions')
+            ->whereIn('transaction_type', $request->type)
+            ->groupBy('transaction_type')
+            ->selectRaw('transaction_type, sum(amount) as sum')
+            ->get();
+
         $transactions = Transaction::whereIn('transaction_type', $request->type)
             ->where('is_coming_soon', false)
+            ->where('is_installment', false)
             ->orderBy('date')
             ->get();
         foreach ($transactions as $k => &$item) {
             $transactions[$k] = new TransactionResource($item);
         }
         unset($item);
-        return response()->json($transactions);
+        return response()->json([
+            'transactions' => $transactions,
+            'total' => $total
+        ]);
     }
+
     public function getBalanceSpecific(Request $request)
     {
         $expenseTotal = Expense::sum('total');
@@ -72,7 +89,7 @@ class HomeController extends Controller
         $lendTotal = Lend::sum('total');
         return response()->json([
             'balanceTotal' => $incomeTotal - $expenseTotal - $basicExpenseTotal,
-            'savingsTotal' => $incomeTotal + $loanTotal - $expenseTotal -$basicExpenseTotal - $lendTotal,
+            'savingsTotal' => $incomeTotal + $loanTotal - $expenseTotal - $basicExpenseTotal - $lendTotal,
             'expenseTotal' => $expenseTotal,
             'basicExpenseTotal' => $basicExpenseTotal,
             'incomeTotal' => $incomeTotal,
@@ -80,6 +97,7 @@ class HomeController extends Controller
             'lendTotal' => $lendTotal
         ]);
     }
+
     public function getExpenseSpecific(Request $request)
     {
         $expense = DB::table('transactions')
@@ -87,9 +105,12 @@ class HomeController extends Controller
             ->groupBy('category_type')
             ->whereMonth('date', $request->month)
             ->where('transaction_type', TransactionType::EXPENSE)
+            ->where('is_coming_soon', false)
+            ->where('is_installment', false)
             ->get();
         return response()->json($expense);
     }
+
     public function getBalanceSpecificByMonth(Request $request)
     {
         $month = $request->input("month");
@@ -100,7 +121,7 @@ class HomeController extends Controller
         $lendTotal = Lend::where('month', $month)->value('total');
         return response()->json([
             'balanceTotal' => $incomeTotal - $expenseTotal - $basicExpenseTotal,
-            'savingsTotal' => $incomeTotal + $loanTotal - $expenseTotal -$basicExpenseTotal - $lendTotal,
+            'savingsTotal' => $incomeTotal + $loanTotal - $expenseTotal - $basicExpenseTotal - $lendTotal,
             'expenseTotal' => $expenseTotal,
             'basicExpenseTotal' => $basicExpenseTotal,
             'incomeTotal' => $incomeTotal,
@@ -125,7 +146,7 @@ class HomeController extends Controller
 
         $transactionTypeName = strtolower(TransactionType::getKey($transactionType));
         $transactionTypeTableName = $transactionTypeName . "s";
-        $transactionTypeRow = DB::table($transactionTypeTableName)->where('month', date('m',strtotime($date)));
+        $transactionTypeRow = DB::table($transactionTypeTableName)->where('month', date('m', strtotime($date)));
 
         DB::transaction(function () use (
             $transactionTypeRow,
@@ -146,10 +167,22 @@ class HomeController extends Controller
                 'is_installment' => $request->input("isInstallment"),
                 'category_type' => $request->input("categoryType"),
             ]);
-            if($request->input('no_balance_effect')) {
+            if ($isInstallment) {
+                DB::table('installments')->insert([
+                    'total' => $request->input("total"),
+                    'start_date' => $request->input("startDate"),
+                    'number_of_months' => $request->input("numberOfMonths"),
+                    'total_of_months' => $request->input("totalOfMonths"),
+                    'paid' => $request->input("paid"),
+                    'paidCount' => $request->input("paidCount"),
+                    'remaining' => $request->input("remaining"),
+                    'transaction_id' => $transaction_id,
+                ]);
+            }
+            if ($request->input('no_balance_effect')) {
                 return;
             }
-            if(!$isComingSoon || $isInstallment) {
+            if (!$isComingSoon || $isInstallment) {
                 if ($transactionTypeRow->exists()) {
                     $transactionTypeAmount = $transactionTypeRow->value("total");
                     $transactionTypeRow->update([
@@ -162,25 +195,41 @@ class HomeController extends Controller
                     ]);
                 }
             }
-            if($isInstallment){
-                DB::table('installments')->insert([
-                    'total' => $request->input("total"),
-                    'number_of_months' => $request->input("number_of_months"),
-                    'paid' => $request->input("paid"),
-                    'paidCount' => $request->input("paidCount"),
-                    'remaining' => $request->input("remaining"),
-                    'transaction_id' => $transaction_id,
-                ]);
-            }
+
 
         });
     }
-    public function storeMulti(Request $request){
+
+    public function paymentInstallment(Request $request)
+    {
+        $installment = DB::table("installments");
+        $installment->where('id', $request->installmentId)
+            ->update([
+                'paid' => $request->input("paid"),
+                'paidCount' => $request->input("paidCount"),
+                'remaining' => $request->input("remaining"),
+                'updated_at' => $request->input("date"),
+            ]);
+        $request->merge([
+            'isInstallment' => 0,
+            'no_balance_effect' => false,
+        ]);
+        $this->store($request);
+        if ((integer)$request->input("remaining") <= 0) {
+            if (!$installment->exists()) {
+                return;
+            }
+            $installment->delete();
+        }
+    }
+
+    public function storeMulti(Request $request)
+    {
         $date = $request->date;
         $data = $request->transactions;
         $sum = $request->sum;
-        $basicExpenseRow = DB::table('basic_expenses')->where('month', date('m',strtotime($date)));
-        DB::transaction(function () use ($sum, $basicExpenseRow, $date, $data){
+        $basicExpenseRow = DB::table('basic_expenses')->where('month', date('m', strtotime($date)));
+        DB::transaction(function () use ($sum, $basicExpenseRow, $date, $data) {
             DB::table('transactions')->insert($data);
             if ($basicExpenseRow->exists()) {
                 $basicExpenseAmount = $basicExpenseRow->value("total");
@@ -196,6 +245,7 @@ class HomeController extends Controller
         });
 
     }
+
     /**
      * Display the specified resource.
      *
@@ -205,7 +255,7 @@ class HomeController extends Controller
     public function show($id)
     {
         $transaction = DB::table("transactions")->where('id', $id)->first();
-        if($transaction){
+        if ($transaction) {
             return response()->json(new TransactionResource($transaction));
         }
         return response()->json();
@@ -263,14 +313,14 @@ class HomeController extends Controller
                 return;
             }
             $transactionRow->delete();
-            if($isComingSoon){
+            if ($isComingSoon) {
                 $request->merge([
                     'isComingSoon' => 0,
                     'date' => date("Y-m-d H:i:s"),
                     'no_balance_effect' => true,
                 ]);
                 $this->store($request);
-                return ;
+                return;
             }
             if ($transactionTypeRow->exists()) {
                 $transactionTypeAmount = $transactionTypeRow->value("total");

@@ -18,5 +18,6 @@ class Installment extends Model
         'paidCount',
         'remaining',
         'transaction_id',
+        'updated_at',
     ];
 }
